@@ -1,7 +1,7 @@
 const redis = require('redis');
-const blocklist = redis.createClient({prefix: 'blocklist-access-token:'});
-const manipulaLista = require('./manipla-lista');
-const manipulaBlockList = manipulaLista(blocklist);
+const blocklist = redis.createClient({ prefix: 'blocklist-access-token:' });
+const manipulaLista = require('./manipula-lista');
+const manipulaBlocklist = manipulaLista(blocklist);
 
 const jwt = require('jsonwebtoken');
 const { createHash } = require('crypto');
@@ -14,10 +14,10 @@ module.exports = {
   async adiciona(token) {
     const dataExpiracao = jwt.decode(token).exp;
     const tokenHash = geraTokenHash(token);
-    await manipulaBlockList.adiciona(tokenHash,'',dataExpiracao);
+    await manipulaBlocklist.adiciona(tokenHash, '', dataExpiracao);
   },
   async contemToken(token) {
     const tokenHash = geraTokenHash(token);
-    return manipulaBlockList.contemChave(tokenHash);
+    return manipulaBlocklist.contemChave(tokenHash);
   },
 };

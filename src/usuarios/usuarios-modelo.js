@@ -1,75 +1,95 @@
-const usuariosDao = require('./usuarios-dao');
-const { InvalidArgumentError } = require('../erros');
-const validacoes = require('../validacoes-comuns');
-const bcrypt = require('bcrypt');
+const usuariosDao = require('./usuarios-dao')
+const { InvalidArgumentError, NaoEncontrado } = require('../erros')
+const validacoes = require('../validacoes-comuns')
+const bcrypt = require('bcrypt')
 
+/**
+ * A classe usuario é responsavel por gerenciar todas as operações relacionadas a usuarios
+ */
 class Usuario {
-  constructor(usuario) {
-    this.id = usuario.id;
-    this.nome = usuario.nome;
-    this.email = usuario.email;
-    this.senhaHash = usuario.senhaHash;
-    this.emailVerificado = usuario.emailVerificado;
-    this.valida();
+  /**
+   * O construtor recebe os dados de um usuario e os atribui a uma instancia atual
+   * @param {object} usuario
+   */
+  constructor (usuario) {
+    this.id = usuario.id
+    this.nome = usuario.nome
+    this.email = usuario.email
+    this.senhaHash = usuario.senhaHash
+    this.emailVerificado = usuario.emailVerificado
+    this.cargo = usuario.cargo
+    this.valida()
   }
 
-  async adiciona() {
-    if (await Usuario.buscaPorEmail(this.email)) {
-      throw new InvalidArgumentError('O usuário já existe!');
-   }
-    await usuariosDao.adiciona(this);
-    const {id} = await usuariosDao.buscaPorEmail(this.email)
-    this.id = id;
-  }
-
-  async adicionaSenha(senha) {
-    validacoes.campoStringNaoNulo(senha, 'senha');
-    validacoes.campoTamanhoMinimo(senha, 'senha', 8);
-    validacoes.campoTamanhoMaximo(senha, 'senha', 64);
-
-    this.senhaHash = await Usuario.gerarSenhaHash(senha);
-  }
-
-  valida() {
-    validacoes.campoStringNaoNulo(this.nome, 'nome');
-    validacoes.campoStringNaoNulo(this.email, 'email');
-  }
-
-  async verificaEmail(){
-    this.emailVerificado = true;
-    await usuariosDao.modificaEmailVerificado(this, this.emailVerificado);
-  }
-
-  async deleta() {
-    return usuariosDao.deleta(this);
-  }
-
-  static async buscaPorId(id) {
-    const usuario = await usuariosDao.buscaPorId(id);
-    if (!usuario) {
-      return null;
+  /**
+   * @throws {InvalidArgumentError} - esse erro ocorre quando um usuario com o mesmo e-mail esta cadastrado
+   */
+  async adiciona () {
+    if (await usuariosDao.buscaPorEmail(this.email)) {
+      throw new InvalidArgumentError('O usuário já existe!')
     }
 
-    return new Usuario(usuario);
+    await usuariosDao.adiciona(this)
+    const { id } = await usuariosDao.buscaPorEmail(this.email)
+    this.id = id
   }
 
-  static async buscaPorEmail(email) {
-    const usuario = await usuariosDao.buscaPorEmail(email);
+  async adicionaSenha (senha) {
+    validacoes.campoStringNaoNulo(senha, 'senha')
+    validacoes.campoTamanhoMinimo(senha, 'senha', 8)
+    validacoes.campoTamanhoMaximo(senha, 'senha', 64)
+
+    this.senhaHash = await Usuario.gerarSenhaHash(senha)
+  }
+
+  valida () {
+    validacoes.campoStringNaoNulo(this.nome, 'nome')
+    validacoes.campoStringNaoNulo(this.email, 'email')
+    const cargosValidos = ['admin', 'editor', 'assinante']
+    if (cargosValidos.indexOf(this.cargo) === -1) {
+      throw new InvalidArgumentError()
+    }
+  }
+
+  async verificaEmail () {
+    this.emailVerificado = true
+    await usuariosDao.modificaEmailVerificado(this, this.emailVerificado)
+  }
+
+  async deleta () {
+    return usuariosDao.deleta(this)
+  }
+
+  static async buscaPorId (id) {
+    const usuario = await usuariosDao.buscaPorId(id)
     if (!usuario) {
-      return null;
+      throw new NaoEncontrado('usuário')
     }
 
-    return new Usuario(usuario);
+    return new Usuario(usuario)
   }
 
-  static lista() {
-    return usuariosDao.lista();
+  static async buscaPorEmail (email) {
+    const usuario = await usuariosDao.buscaPorEmail(email)
+    if (!usuario) {
+      throw new NaoEncontrado('usuário')
+    }
+
+    return new Usuario(usuario)
   }
 
-  static gerarSenhaHash(senha) {
-    const custoHash = 12;
-    return bcrypt.hash(senha, custoHash);
+  static lista () {
+    return usuariosDao.lista()
+  }
+
+  static gerarSenhaHash (senha) {
+    const custoHash = 12
+    return bcrypt.hash(senha, custoHash)
+  }
+
+  atualizarSenha () {
+    return usuariosDao.atualizarSenha(this.senhaHash, this.id)
   }
 }
 
-module.exports = Usuario;
+module.exports = Usuario
